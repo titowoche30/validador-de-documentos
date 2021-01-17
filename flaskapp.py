@@ -6,11 +6,6 @@ app.config.from_pyfile('config.py')
 
 db = MySQL(app)
 
-#@app.route('/')
-#def index():
-#    return render_template('inicial.html')
-
-
 from views import *
  
 if __name__ == "__main__":
