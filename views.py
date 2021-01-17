@@ -68,7 +68,6 @@ def login():
 def autenticar():
     user_id = user_dao.get_user_id(request.form['user'])
     user = user_dao.search_by_id(user_id)
-    # Quando erra senha mostra usuário não existente
  
     if user:
         if user.password == request.form['password']:
@@ -251,7 +250,7 @@ def update_file():
         flash('Arquivo atualizado com sucesso')
         return redirect(url_for('user_screen'))
 
-    flash('Arquivo atualizado com sucesso')
+    flash('Não foi possível atualizar o arquivo')
     return redirect(url_for('user_screen'))
 
 @app.route('/file-delete/<int:id>')
@@ -290,7 +289,7 @@ def file_log(id):
     file = file_dao.search_by_id(id)
 
     if not file:
-        flash('Esse arquivo não existe')
+        flash('O arquivo desse log não existe')
         return redirect(url_for('user_screen'))
 
     if user_id != file.userid and user_id != 1:
