@@ -23,8 +23,8 @@ criar_tabelas = '''SET NAMES utf8;
     CREATE TABLE `File` (
       `id` int(11) NOT NULL AUTO_INCREMENT,
       `userid` int(11) NOT NULL,
-      `file` varchar(100) COLLATE utf8_bin NOT NULL,
-      `hash` varchar(200),
+      `file` varchar(1000) COLLATE utf8_bin NOT NULL,
+      `hash` varchar(300),
       PRIMARY KEY (`id`),
       FOREIGN KEY (`userid`) REFERENCES User(`id`) ON DELETE CASCADE,
       UNIQUE KEY(userid,hash)
