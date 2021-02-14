@@ -1,14 +1,44 @@
 from modelos import User, File
 from dao import FileDao, UserDao
-from aws_tools import *
-from flaskapp import db,app
+from gcp_tools import create_storage_file
+from main import app
 from helpers import hashfile
 from config import UPLOAD_PATH
 from flask import Flask, render_template, request, redirect, session, flash, url_for, send_from_directory
-from flask_mysqldb import MySQL
-import os
 from MySQLdb._exceptions import IntegrityError
+import os
+import pymysql
 
+db_user = os.environ.get('CLOUD_SQL_USERNAME')
+db_password = os.environ.get('CLOUD_SQL_PASSWORD')
+db_name = os.environ.get('CLOUD_SQL_DATABASE_NAME')
+db_connection_name = os.environ.get('CLOUD_SQL_CONNECTION_NAME')
+
+
+def get_db():
+    unix_socket = '/cloudsql/{}'.format(db_connection_name)
+    try:
+        if os.environ.get('GAE_ENV') == 'standard':
+            conn = pymysql.connect(user=db_user,
+                                password=db_password,
+                                db=db_name,
+                                unix_socket=unix_socket
+                        )
+    except pymysql.MySQLError as e:
+        print(e)
+
+    return conn
+
+'''
+#    try:
+        # if os.environ.get('GAE_ENV') == 'standard':
+    conn = pymysql.connect(user=db_user, password=db_password,port = 3306, db=db_name, host = '35.232.9.140'
+                        )
+#    except pymysql.MySQLError as e:
+#    print(e)
+'''
+
+db = get_db()
 file_dao = FileDao(db)
 user_dao = UserDao(db)
 
@@ -22,13 +52,12 @@ def public_page():
 
 @app.route('/validate',methods = ['POST'])
 def validate_file():
-    file_id = request.form['id']
-    motive = request.form['motive']
+    file_id = int(request.form['id'])
     file = request.files['file']
 
     file_name = file.filename.lower()
-    if not file_name.endswith(('.png', '.jpeg', '.pdf')): 
-        flash('Arquivo no formato inválido')
+    if not file_name.endswith(('.png', '.jpeg', '.pdf', '.txt', '.docx')): 
+        flash('Formato inválido de arquivo')
         return redirect(url_for('public_page'))
 
 
@@ -36,7 +65,6 @@ def validate_file():
     if not isinstance(file_obj,File):
         flash('Arquivo não encontrado')
         return redirect(url_for('public_page'))
-
 
     # Pra conseguir o hash do arquivo, tenho que salva-lo, depois ler
     tmp_file_path = os.path.join(app.config['UPLOAD_PATH'],file.filename)
@@ -46,16 +74,12 @@ def validate_file():
     os.remove(tmp_file_path)
     
     # Checando se os hashs batem
-    pos_val_flag, neg_val_flag = 0,0
     if uploaded_file_hash == file_obj.hash:
         flash('Arquivo validado com sucesso')
-        pos_val_flag = 1
     else:
-        flash('Arquivo não-válido')
-        neg_val_flag = 1
+        flash('Arquivo inválido')
 
-    write_to_dynamo(file_id,motive,pos_val_flag,neg_val_flag)
-
+    
     return redirect(url_for('public_page'))
 
 @app.route('/login')
@@ -67,15 +91,16 @@ def login():
 @app.route('/autenticar',methods=['POST'])
 def autenticar():
     user_id = user_dao.get_user_id(request.form['user'])
+    print('olha o user_id retornado ==\n',user_id ) 
     user = user_dao.search_by_id(user_id)
- 
+
     if user:
         if user.password == request.form['password']:
              # Cada usuário tem sua sessão
             session['user'] = user.id
             session['password'] = user.password
             session['login'] = user.login
-
+            session['telefone'] = user.telefone
             flash(user.name + ' logado com sucesso')
             return redirect(url_for('user_screen'))
         else:
@@ -97,23 +122,28 @@ def create_user_form():
 
 @app.route('/create-user', methods = ['POST'])
 def create_user():
-    name = request.form['name']
+    name = request.form['name']   
     login = request.form['login']
     password = request.form['password']
+    telefone = request.form['telefone']
     email = request.form['email']
 
-    user = User(name,login,password,email)
+    user = User(name,login,password,telefone,email)
+    user_validate = user.valitade_fields()
+    if not user_validate: 
+        try:
+            user = user_dao.save(user)
+        except IntegrityError as e:
+            flash('Usuário já existente')
+            return redirect(url_for('create_user_form'))
 
-    try:
-        user = user_dao.save(user)
-    except IntegrityError as e:
-        flash('Usuário já existente')
+        if isinstance(user,User): 
+            flash('Usuário criado com sucesso')
+            return redirect(url_for('index'))
+    else: 
+        flash(user_validate)
         return redirect(url_for('create_user_form'))
 
-
-    if isinstance(user,User): 
-        flash('Usuário criado com sucesso')
-        return redirect(url_for('index'))
 
 @app.route('/home')
 def user_screen():
@@ -124,9 +154,9 @@ def user_screen():
     user = user_dao.search_by_id(user_id)
     files = file_dao.listing(user_id)
 
-    new_files = set_files_val(files)
+    extensoes = file_dao.listing_extensions(user_id)
 
-    return render_template('files-list.html', files=new_files, user = user)
+    return render_template('files-list.html', files=files, user = user, extensoes = extensoes)
 
 
 @app.route('/user-edit')
@@ -150,9 +180,11 @@ def user_update():
     login = request.form['login']
     password = request.form['password']
     email = request.form['email']
+    telefone = request.form['telefone']
+
     id = request.form['id']
 
-    user = User(name,login,password,email,id=id)
+    user = User(name,login,password,telefone,email,id=id)
     user_dao.save(user)
 
     flash('Informações atualizadas com sucesso')
@@ -172,7 +204,6 @@ def user_delete(login=None):
         flag = url_for('user_screen')
 
     user_dao.delete(user_id)
-    delete_s3_user_folder(user_id)
     
     flash('O usuário foi removido com sucesso!')
     return redirect(flag)
@@ -200,107 +231,38 @@ def create_file():
     user_id = session['user']
 
     file = request.files['file'] 
-    user_id,file_adress,hash = create_s3_file(file,user_id)
-    file = File(user_id,file_adress,hash)
+    file_adress,hash = create_storage_file(file,user_id)
+    file = File(file_adress,hash,user_id)
     file = file_dao.save(file)
 
     if isinstance(file,File):
         flash('Arquivo criado com sucesso')
         return redirect(url_for('user_screen'))
     else:
-        print('\n\n-----OLÁ------\n\n')
+        flash('Não foi possível criar o arquivo')
+        return redirect(url_for('create_file_form'))
+
+@app.route('/filter-extension/<int:id>',methods=['POST'])
+def filtrar_extensao(id):
+    extensao = str(request.form.get('comp_select'))
+    user = user_dao.search_by_id(id)
+    files = file_dao.listing_by_extension(user,extensao)
+
+    return render_template('files-list.html', files=files, user = user, extensoes = [extensao])
 
 
-@app.route('/edit-file/<int:id>')
-def edit_file(id):  
-    user_id = session['user']
-    if user_id is None:
-        return redirect(url_for('index'))
+@app.route('/filter-name',methods=['POST'])
+def filtrar_nome():
+    nome = request.form['nome_do_arquivo']
+    userid = request.form['id']
+    user = user_dao.search_by_id(userid)
+    files = file_dao.listing_by_name(user,nome)
 
-    file = file_dao.search_by_id(id)
+    extensoes = [] 
+    for file in files: 
+        extensoes.append(file.get_file_extension())
 
-    if not file:
-        flash('Esse arquivo não existe')
-        return redirect(url_for('user_screen'))
-
-    if user_id != file.userid and user_id != 1:
-        flash('Você não tem permissão para editar esse arquivo')
-        return redirect(url_for('user_screen'))
-
-
-    return render_template('editar-file.html',
-    titulo = f'Editar arquivo {file.get_key()}',file = file)
-
-@app.route('/update-file', methods = ['POST'])
-def update_file():
-    user_id = request.form['user_id']
-    file_adress = request.form['file_adress']
-    id = request.form['id']
-    file = request.files['file']
-
-    file_id = delete_s3_file(file_adress,id)
-    delete_file_from_dynamo(id)
-
-    user_id,file_adress,hash = create_s3_file(file,user_id)
-
-    file = File(user_id,file_adress,hash,id=file_id)
-    file = file_dao.save(file)
-
-    if isinstance(file,File):
-        flash('Arquivo atualizado com sucesso')
-        return redirect(url_for('user_screen'))
-
-    flash('Não foi possível atualizar o arquivo')
-    return redirect(url_for('user_screen'))
-
-@app.route('/file-delete/<int:id>')
-def delete_file(id):
-    user_id = session['user']
-
-    if user_id is None:
-        return redirect(url_for('index'))
-
-    file = file_dao.search_by_id(id)
-
-    if not file:
-        flash('Esse arquivo não existe')
-        return redirect(url_for('user_screen'))
-
-    if user_id != file.userid and user_id != 1:
-        flash('Você não tem permissão para deletar esse arquivo')
-        return redirect(url_for('user_screen'))
-
-    delete_s3_file(file.file,id)
-    delete_file_from_dynamo(file.id)
-
-    file_dao.delete(id)
-
-    flash('O arquivo foi removido com sucesso!')
-    return redirect(url_for('user_screen'))
-
-
-@app.route('/file-log/<int:id>')
-def file_log(id):
-    user_id = session['user']
-
-    if user_id is None:
-        return redirect(url_for('index'))
-
-    file = file_dao.search_by_id(id)
-
-    if not file:
-        flash('O arquivo desse log não existe')
-        return redirect(url_for('user_screen'))
-
-    if user_id != file.userid and user_id != 1:
-        flash('Você não tem permissão para gerar esse log')
-        return redirect(url_for('user_screen'))
-
-    if not generate_log(file):
-        flash('Impossível gerar log, nenhuma validação foi feita para esse arquivo.')
-        return redirect(url_for("user_screen"))
-
-    return send_from_directory(f'{UPLOAD_PATH}','log.csv', as_attachment = True)
+    return render_template('files-list.html', files=files, user = user, extensoes = extensoes)
 
 @app.route('/edit-users')
 def users_edit():
@@ -343,6 +305,3 @@ def users_delete():
         return redirect(url_for('users_remove'))
 
     return redirect(url_for('user_delete',login=login))
-
-
-#TODO Load balancing quando já tiver no EC2

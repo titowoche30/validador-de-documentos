@@ -21,10 +21,9 @@
         <h1>Validação</h1>
         <form method="POST" action="{{url_for('validate_file')}}" enctype="multipart/form-data" >
             <p><label>ID do arquivo:</label> <input class="form-control" type="number" name="id" required></p>
-            <p><label>Motivo da validação:</label> <input class="form-control" type="text" name="motive" required></p>
             <label class="fileContainer">
-                Selecionar arquivo jpeg, pdf ou png
-                <input type="file" name="file" accept=".jpeg, .pdf, .png">
+                Selecionar arquivo jpeg, pdf, png, txt ou docx
+                <input type="file" name="file" accept=".jpeg, .pdf, .png, .txt, .docx">
               </label>
 
             <p></p>

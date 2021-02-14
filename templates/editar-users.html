@@ -22,7 +22,7 @@
         <h2>Digite o login do usuário que você quer atualizar</h2>
         <form method="POST" action="{{url_for('users_update')}}">
             <p><label>Login:</label> <input class="form-control" type="text" name="login" required></p>
-            <p><button class="btn btn-primary" type="submit">Editar</button></p>
+            <button class="btn btn-primary" type="submit">Editar</button>
             <a class="btn btn-primary" href="{{url_for('user_screen')}}">Voltar</a>
 
         </form>

@@ -21,19 +21,10 @@
 
         <h1>Dados</h1>
         <form method="POST" action="{{url_for('create_file')}}" enctype="multipart/form-data">
-            <!-- <input type="hidden" name="proxima" value="{{ proxima or url_for('index') }}">  -->
-
             <label class="fileContainer">
-                Selecionar arquivo jpeg, pdf ou png
-                <input type="file" name="file" accept=".jpeg, .pdf, .png">
+                Selecionar arquivo jpeg, pdf, png, txt ou docx
+                <input type="file" name="file" accept=".jpeg, .pdf, .png, .txt, .docx">
               </label>
-
-
-            <!-- <p><label>Nome:</label> <input class="form-control" type="text" name="name" required></p>
-            <p><label>Email:</label> <input class="form-control" type="text" name="email" required></p>
-            <p><label>Nome de usuário:</label> <input class="form-control" type="text" name="login" required></p>
-            <p><label>Senha:</label> <input class="form-control" type="password" name="password" required></p> -->
-
             <p></p>
             <button class="btn btn-primary" type="submit">Enviar</button>
             <a class="btn btn-primary" href="{{url_for('user_screen')}}">Voltar</a>
