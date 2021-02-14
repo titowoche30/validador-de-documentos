@@ -1,4 +1,4 @@
 # validador-de-documentos
-Primeiro trabalho da disciplina de Desenvolvimento de Software na Nuvem
+Segundo trabalho da disciplina de Desenvolvimento de Software na Nuvem
 
-### OBS: O arquivo config.py não está aqui por questões de segurança.
+### OBS: Os arquivos `config.py` , `app.yaml` e `trabalho-2-key.json` não está aqui por questões de segurança.
