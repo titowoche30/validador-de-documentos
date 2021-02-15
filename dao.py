@@ -66,22 +66,26 @@ class FileDao:
         return extensions
 
 
-    def listing_by_extension(self,user,extension):
+    def listing_by_extension(self,userid,extension):
         files = []
         query = datastore_client.query(kind='id')
         query.add_filter('Format', '=', extension)
 
+        if userid != 1 : query.add_filter('Userid', '=', userid)
+ 
         query_iter = query.fetch()
         for entity in query_iter:
             files.append(get_file_object(entity['Link'],entity['Hash'],entity['Userid'],entity.id))
 
         return files
 
-    def listing_by_name(self,user,name):
+    def listing_by_name(self,userid,name):
         files = []
         query = datastore_client.query(kind='id')
         query.add_filter('Name', '=', name)
-
+  
+        if userid != 1 : query.add_filter('Userid', '=', userid)
+         
         query_iter = query.fetch()
         for entity in query_iter:
             files.append(get_file_object(entity['Link'],entity['Hash'],entity['Userid'],entity.id))

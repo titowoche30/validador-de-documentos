@@ -14,7 +14,6 @@ db_password = os.environ.get('CLOUD_SQL_PASSWORD')
 db_name = os.environ.get('CLOUD_SQL_DATABASE_NAME')
 db_connection_name = os.environ.get('CLOUD_SQL_CONNECTION_NAME')
 
-
 def get_db():
     unix_socket = '/cloudsql/{}'.format(db_connection_name)
     try:
@@ -29,13 +28,16 @@ def get_db():
 
     return conn
 
+
+
 '''
-#    try:
-        # if os.environ.get('GAE_ENV') == 'standard':
-    conn = pymysql.connect(user=db_user, password=db_password,port = 3306, db=db_name, host = '35.232.9.140'
-                        )
-#    except pymysql.MySQLError as e:
-#    print(e)
+def get_db_local():
+    try:
+        conn = pymysql.connect(user=db_user, password=db_password,port = 3306, db=db_name, host = db_host)
+    except pymysql.MySQLError as e:
+        print(e)
+
+    return conn
 '''
 
 db = get_db()
@@ -91,8 +93,7 @@ def login():
 @app.route('/autenticar',methods=['POST'])
 def autenticar():
     user_id = user_dao.get_user_id(request.form['user'])
-    print('olha o user_id retornado ==\n',user_id ) 
-    user = user_dao.search_by_id(user_id)
+    user = user_dao.search_by_id(user_id) 
 
     if user:
         if user.password == request.form['password']:
@@ -246,7 +247,7 @@ def create_file():
 def filtrar_extensao(id):
     extensao = str(request.form.get('comp_select'))
     user = user_dao.search_by_id(id)
-    files = file_dao.listing_by_extension(user,extensao)
+    files = file_dao.listing_by_extension(id,extensao)
 
     return render_template('files-list.html', files=files, user = user, extensoes = [extensao])
 
@@ -256,7 +257,7 @@ def filtrar_nome():
     nome = request.form['nome_do_arquivo']
     userid = request.form['id']
     user = user_dao.search_by_id(userid)
-    files = file_dao.listing_by_name(user,nome)
+    files = file_dao.listing_by_name(int(userid),nome)
 
     extensoes = [] 
     for file in files: 

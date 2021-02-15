@@ -12,7 +12,7 @@ from views import *
 if __name__ == "__main__":
     # Só vai ser executado se o arquivo for executado diretamente, ou seja, se for importado não executa isso aqui
     #app.run(debug=True)
-    app.run(host='127.0.0.1', port=8080) 
+    app.run(host='127.0.0.1', port=8080, debug=False) 
 
 # [END gae_python3_app]
 # [END gae_python37_app]
