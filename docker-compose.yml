@@ -1,0 +1,27 @@
+version: '3.7'
+services:
+  postgres-trab3:
+    container_name: postgres-trab3
+    image: postgres:latest
+    restart: always
+    volumes:
+      - ./db-data/:/var/lib/postgresql/data
+    networks:
+      - trab3-network
+    environment:
+      - POSTGRES_PASSWORD=postgres
+            
+  app-trab3:
+    container_name: app-trab3
+    build: app
+    restart: always
+    depends_on:
+      - postgres-trab3
+    networks:
+      - trab3-network
+    ports:
+      - "5000:5000" 
+    command: sh -c "python3 flaskapp.py"
+    # command: sh -c "python3 prepara_banco.py && python3 flaskapp.py"
+networks:
+  trab3-network:

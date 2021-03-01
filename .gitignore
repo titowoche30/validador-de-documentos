@@ -1,6 +1,5 @@
-app.yaml
 config.py
-trabalho-2-key.json
+venv/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
