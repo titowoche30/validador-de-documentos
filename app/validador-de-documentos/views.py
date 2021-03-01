@@ -199,9 +199,8 @@ def create_file():
     user_id = session['user']
 
     file = request.files['file']
-    app.logger.info(f'\n\nOLHA O FILE = {file}\n\n') 
+    #app.logger.info(f'\n\nFILE = {file}\n\n') 
 
-    print() 
     user_id,file_adress,hash = create_s3_file(file,user_id)
     file = File(user_id,file_adress,hash)
     file = file_dao.save(file)
@@ -210,8 +209,8 @@ def create_file():
         flash('Arquivo criado com sucesso')
         return redirect(url_for('user_screen'))
     else:
-        print('\n\n-----OLÁ------\n\n')
-
+        flash('Não foi possível criar o arquivo')
+        return redirect(url_for('user_screen'))
 
 @app.route('/edit-file/<int:id>')
 def edit_file(id):  
