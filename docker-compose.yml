@@ -2,7 +2,7 @@ version: '3.7'
 services:
   postgres-trab3:
     container_name: postgres-trab3
-    image: postgres:latest
+    image: postgres:13
     restart: always
     volumes:
       - ./db-data/:/var/lib/postgresql/data
@@ -22,6 +22,6 @@ services:
     ports:
       - "5000:5000" 
     command: sh -c "python3 flaskapp.py"
-    # command: sh -c "python3 prepara_banco.py && python3 flaskapp.py"
+#    command: sh -c "python3 prepara_banco.py && python3 flaskapp.py"
 networks:
   trab3-network:
