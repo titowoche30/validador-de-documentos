@@ -10,7 +10,7 @@ Terceiro trabalho da disciplina de Desenvolvimento de Software na Nuvem
 1. Baixe esse repositório e navegue até ele
 2. Mude a branch: `$ git checkout trab3-docker`
 3. Coloque um arquivo `config.py` em [app/validador-de-documentos/](https://github.com/titowoche30/validador-de-documentos/tree/trab3-docker/app/validador-de-documentos)
-4. Execute: `$ unzip db-data/data.zip` 
+4. Execute: `$ unzip db-data/data.zip -d db-data/` 
 5. Execute: `$ docker-compose up` se desejar ver os logs, caso não, execute `$ docker-compose up -d`
 
     **OBS: por conta do Pandas, a imagem do app demora cerca de 25 minutos pra terminar o build.**
